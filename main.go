@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"io"
 	"log"
 	"net/http"
@@ -31,23 +32,16 @@ func main() {
 		requestID := uuid.New().String()
 
 		if debug {
-			log.Printf("[%s] Received request: %s %s", requestID, r.Method, r.URL.Path)
+			log.Printf("[%s] Processing request: %s %s", requestID, r.Method, r.URL.Path)
 		}
 
 		r.URL.Scheme = target.Scheme
 		r.URL.Host = target.Host
 		r.URL.Path = "/prometheus" + r.URL.Path
 
-		if debug {
-			log.Printf("[%s] Modified URL: %s", requestID, r.URL.String())
-		}
-
 		// Check if the content type is form data
 		contentType := r.Header.Get("Content-Type")
 		if strings.HasPrefix(contentType, "multipart/form-data") {
-			if debug {
-				log.Printf("[%s] Processing multipart form data", requestID)
-			}
 
 			// Parse the multipart form
 			err := r.ParseMultipartForm(32 << 20) // 32MB max memory
@@ -67,6 +61,12 @@ func main() {
 				}
 			}
 
+			// Log form data if debug is enabled
+			if debug {
+				formDataJSON, _ := json.MarshalIndent(formValues, "", "  ")
+				log.Printf("[%s] Form data: %s", requestID, string(formDataJSON))
+			}
+
 			// Set the new content type and body
 			r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			r.Body = io.NopCloser(strings.NewReader(formValues.Encode()))
@@ -75,10 +75,6 @@ func main() {
 			if debug {
 				log.Printf("[%s] Converted multipart form to URL-encoded form", requestID)
 			}
-		}
-
-		if debug {
-			log.Printf("[%s] Proxying request to target", requestID)
 		}
 
 		proxy.ServeHTTP(w, r)
