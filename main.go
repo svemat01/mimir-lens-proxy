@@ -34,10 +34,12 @@ func main() {
 			log.Printf("[%s] Received request: %s %s", requestID, r.Method, r.URL.Path)
 		}
 
+		r.URL.Scheme = target.Scheme
+		r.URL.Host = target.Host
 		r.URL.Path = "/prometheus" + r.URL.Path
 
 		if debug {
-			log.Printf("[%s] Modified path: %s", requestID, r.URL.Path)
+			log.Printf("[%s] Modified URL: %s", requestID, r.URL.String())
 		}
 
 		// Check if the content type is form data
